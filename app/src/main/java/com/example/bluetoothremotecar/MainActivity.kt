@@ -1,8 +1,10 @@
 package com.example.bluetoothremotecar
 
+import android.Manifest
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Button
@@ -19,13 +21,33 @@ import com.example.bluetoothremotecar.ui.theme.BluetoothRemoteCarTheme
 
 
 enum class Screen() {
-  Home,
-  Joystick
+    Home,
+    Joystick,
 }
 
 class MainActivity : ComponentActivity() {
+    private val requestBluetoothPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
+                setContent {
+                    BluetoothRemoteCarTheme {
+                        // Restart the UI if permission is granted
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = MaterialTheme.colorScheme.background
+                        ) {
+                            AppNavigation()
+                        }
+                    }
+                }
+            } else {
+                navigateToPermissionDeniedScreen()
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+            requestBluetoothPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         setContent {
             BluetoothRemoteCarTheme {
                 // A surface container using the 'background' color from the theme
@@ -35,6 +57,14 @@ class MainActivity : ComponentActivity() {
                 ) {
                     AppNavigation()
                 }
+            }
+        }
+    }
+
+    private fun navigateToPermissionDeniedScreen() {
+        setContent {
+            BluetoothRemoteCarTheme {
+                    PermissionDeniedScreen()
             }
         }
     }
@@ -69,6 +99,22 @@ fun JoystickScreen(navController: NavController){
         Text(text = "Screen Joystick")
         Button(onClick = { navController.navigate(Screen.Home.name) }) {
             Text(text = "Go to Screen A")
+        }
+    }
+}
+@Composable
+fun PermissionDeniedScreen() {
+    BluetoothRemoteCarTheme {
+        // A surface container using the 'background' color from the theme
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Column {
+                Text(text = "Bluetooth Permission Denied")
+                Text(text = "Please grant Bluetooth permission in Settings")
+                // You can add a button to open app settings for the user to grant the permission
+            }
         }
     }
 }
