@@ -2,8 +2,10 @@ package com.example.bluetoothremotecar
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -27,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
@@ -40,6 +43,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.bluetoothremotecar.ui.theme.BluetoothRemoteCarTheme
 import com.manalkaff.jetstick.JoyStick
+import java.io.IOException
+import java.util.UUID
 
 
 enum class Screen() {
@@ -57,6 +62,7 @@ class MainActivity : ComponentActivity() {
                 // Handle the granted permissions
                 if (grantedPermissions.containsKey(Manifest.permission.ACCESS_FINE_LOCATION)
                     && grantedPermissions.containsKey(Manifest.permission.BLUETOOTH_CONNECT)
+                    && grantedPermissions.containsKey(Manifest.permission.BLUETOOTH_SCAN)
                 ) {
                     // Both permissions granted, proceed with your operations
                     setContent {
@@ -87,11 +93,12 @@ class MainActivity : ComponentActivity() {
         val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             arrayOf(
                 Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.BLUETOOTH_CONNECT
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.BLUETOOTH_SCAN,
             )
         } else {
             arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION
+                Manifest.permission.ACCESS_FINE_LOCATION,
             )
         }
 
@@ -190,8 +197,45 @@ fun HomeScreen(navController: NavController, context:Context){
     }
 }
 
+@SuppressLint("MissingPermission")
 @Composable
 fun JoystickScreen(navController: NavController, address:String){
+    var bluetoothSocket: BluetoothSocket? = null
+
+    DisposableEffect(Unit) {
+        val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+        val bluetoothDevice: BluetoothDevice? = bluetoothAdapter.getRemoteDevice(address)
+
+        val connectThread = object : Thread() {
+            override fun run() {
+                val uuid = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb") // SPP UUID
+                try {
+                    bluetoothSocket = bluetoothDevice?.createRfcommSocketToServiceRecord(uuid)
+                    bluetoothAdapter.cancelDiscovery()
+                    bluetoothSocket?.connect()
+                    Log.d("Bluetooth", "Connected successfully")
+                } catch (e: IOException) {
+                    Log.e("Bluetooth", "Connection failed: ${e.message}")
+                    try {
+                        bluetoothSocket?.close()
+                    } catch (closeException: IOException) {
+                        Log.e("Bluetooth", "Could not close the client socket", closeException)
+                    }
+                }
+            }
+        }
+        connectThread.start()
+
+        onDispose {
+            // Clean up and close the socket when the composable is removed from the composition
+            try {
+                bluetoothSocket?.close()
+            } catch (e: IOException) {
+                Log.e("Bluetooth", "Could not close the client socket", e)
+            }
+        }
+    }
+
     Column (
         modifier = Modifier
             .fillMaxSize(),
@@ -207,6 +251,7 @@ fun JoystickScreen(navController: NavController, address:String){
         }
     }
 }
+
 @Composable
 fun PermissionDeniedScreen() {
     BluetoothRemoteCarTheme {
