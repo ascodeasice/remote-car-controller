@@ -36,6 +36,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.bluetoothremotecar.ui.theme.BluetoothRemoteCarTheme
 
 
@@ -135,8 +136,13 @@ fun AppNavigation(context: Context) {
         composable(Screen.Home.name) {
             HomeScreen(navController = navController, context=context)
         }
-        composable(Screen.Joystick.name) {
-            JoystickScreen(navController = navController)
+        composable(
+            "${Screen.Joystick.name}/{address}",
+            arguments=listOf(navArgument("address"){defaultValue="none"})
+        ) {
+            backStackEntry ->
+            val dataReceived = backStackEntry.arguments?.getString("address")?:"No data"
+            JoystickScreen(navController = navController, address=dataReceived)
         }
     }
 }
@@ -166,7 +172,7 @@ fun HomeScreen(navController: NavController, context:Context){
             Card(
                 modifier = Modifier
                     .size(width = 240.dp, height = 80.dp),
-                onClick={navController.navigate(Screen.Joystick.name)}
+                onClick={navController.navigate("${Screen.Joystick.name}/${device.address}")}
             )
             {
                 Text(
@@ -183,9 +189,10 @@ fun HomeScreen(navController: NavController, context:Context){
 }
 
 @Composable
-fun JoystickScreen(navController: NavController){
+fun JoystickScreen(navController: NavController, address:String){
     Column {
         Text(text = "Screen Joystick")
+        Text(address)
         Button(onClick = { navController.navigate(Screen.Home.name) }) {
             Text(text = "Go to Screen A")
         }
