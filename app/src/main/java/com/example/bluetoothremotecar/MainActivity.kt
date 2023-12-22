@@ -44,6 +44,7 @@ import androidx.navigation.navArgument
 import com.example.bluetoothremotecar.ui.theme.BluetoothRemoteCarTheme
 import com.manalkaff.jetstick.JoyStick
 import java.io.IOException
+import java.io.OutputStream
 import java.util.UUID
 
 
@@ -246,11 +247,33 @@ fun JoystickScreen(navController: NavController, address:String){
             Modifier.padding(30.dp),
             size = 200.dp,
             dotSize = 50.dp
-        ){ x: Float, y: Float ->
+        ) { x: Float, y: Float ->
             Log.d("JoyStick", "$x, $y")
+            // Send data when the joystick position changes
+            val message = "$x $y"
+            sendMessage(bluetoothSocket, message) // Change baud rate as needed
         }
     }
 }
+
+   private fun sendMessage(socket: BluetoothSocket?, message: String) {
+        if (socket != null && socket.isConnected) {
+            try {
+                val outputStream: OutputStream = socket.outputStream
+
+                // Send the actual message
+                outputStream.write(message.toByteArray())
+                outputStream.write("\r\n".toByteArray())
+                outputStream.flush()
+
+                Log.d("Bluetooth", "Message sent: $message")
+            } catch (e: IOException) {
+                Log.e("Bluetooth", "Error sending message: ${e.message}")
+            }
+        } else {
+            Log.e("Bluetooth", "Socket is not connected")
+        }
+    }
 
 @Composable
 fun PermissionDeniedScreen() {
