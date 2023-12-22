@@ -46,6 +46,8 @@ import com.manalkaff.jetstick.JoyStick
 import java.io.IOException
 import java.io.OutputStream
 import java.util.UUID
+import kotlin.math.abs
+import kotlin.math.atan2
 
 
 enum class Screen() {
@@ -248,12 +250,48 @@ fun JoystickScreen(navController: NavController, address:String){
             size = 200.dp,
             dotSize = 50.dp
         ) { x: Float, y: Float ->
-            Log.d("JoyStick", "$x, $y")
             // Send data when the joystick position changes
-            val message = "$x $y"
+            val message = getMessage(x,y) // encode degree for hardware
             sendMessage(bluetoothSocket, message) // Change baud rate as needed
         }
     }
+}
+
+fun calculateAngle(x: Float, y: Float): Double {
+    // If both x and y are zero, return 0 degrees
+    if (x == 0f && y == 0f) {
+        return 0.0
+    }
+
+    // Calculate the angle in radians using arctangent
+    var angle = Math.toDegrees(atan2(y.toDouble(), x.toDouble()))
+
+    // Ensure the angle is positive
+    if (angle < 0) {
+        angle += 360.0
+    }
+
+    return angle
+}
+
+fun getMessage(x:Float, y:Float):String
+{
+
+    val threshold=10f
+    // If both x and y are zero, return '0'
+    if (abs(x) <=threshold && abs(y) <=threshold) {
+        return "0"
+    }
+
+    // Calculate the angle in degrees
+    val angle = calculateAngle(x, y)
+
+    // Define character categories for each 45-degree increment
+    val categories = arrayOf("g","h","a", "b", "c", "d", "e", "f" ) // Counter-clockwise mapping
+
+    // Categorize the angle based on 45-degree increments
+    val categoryIndex = ((angle +22.5)% 360 / 45).toInt()
+    return categories[categoryIndex]
 }
 
    private fun sendMessage(socket: BluetoothSocket?, message: String) {
@@ -263,7 +301,6 @@ fun JoystickScreen(navController: NavController, address:String){
 
                 // Send the actual message
                 outputStream.write(message.toByteArray())
-                outputStream.write("\r\n".toByteArray())
                 outputStream.flush()
 
                 Log.d("Bluetooth", "Message sent: $message")
