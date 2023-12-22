@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,13 +21,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
@@ -38,6 +39,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.bluetoothremotecar.ui.theme.BluetoothRemoteCarTheme
+import com.manalkaff.jetstick.JoyStick
 
 
 enum class Screen() {
@@ -190,11 +192,18 @@ fun HomeScreen(navController: NavController, context:Context){
 
 @Composable
 fun JoystickScreen(navController: NavController, address:String){
-    Column {
-        Text(text = "Screen Joystick")
-        Text(address)
-        Button(onClick = { navController.navigate(Screen.Home.name) }) {
-            Text(text = "Go to Screen A")
+    Column (
+        modifier = Modifier
+            .fillMaxSize(),
+        verticalArrangement = Arrangement.Center, // Vertically center the items
+        horizontalAlignment = Alignment.CenterHorizontally // Horizontally center the items
+    ){
+        JoyStick(
+            Modifier.padding(30.dp),
+            size = 200.dp,
+            dotSize = 50.dp
+        ){ x: Float, y: Float ->
+            Log.d("JoyStick", "$x, $y")
         }
     }
 }
