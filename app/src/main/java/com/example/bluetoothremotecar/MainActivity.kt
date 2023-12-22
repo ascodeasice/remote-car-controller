@@ -5,6 +5,8 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -29,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -42,29 +45,66 @@ enum class Screen() {
 }
 
 class MainActivity : ComponentActivity() {
-    private val requestBluetoothPermission =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (isGranted) {
-                setContent {
-                    BluetoothRemoteCarTheme {
-                        // Restart the UI if permission is granted
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = MaterialTheme.colorScheme.background
-                        ) {
-                            val context=this;
-                            AppNavigation(context)
+    private val requestMultiplePermissions =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            val grantedPermissions = permissions.filterValues { it }
+            val deniedPermissions = permissions.filterValues { !it }
+
+            if (grantedPermissions.isNotEmpty()) {
+                // Handle the granted permissions
+                if (grantedPermissions.containsKey(Manifest.permission.ACCESS_FINE_LOCATION)
+                    && grantedPermissions.containsKey(Manifest.permission.BLUETOOTH_CONNECT)
+                ) {
+                    // Both permissions granted, proceed with your operations
+                    setContent {
+                        BluetoothRemoteCarTheme {
+                            Surface(
+                                modifier = Modifier.fillMaxSize(),
+                                color = MaterialTheme.colorScheme.background
+                            ) {
+                                AppNavigation(this)
+                            }
                         }
                     }
+                } else {
+                    // Handle scenario when only one of the permissions is granted
+                    navigateToPermissionDeniedScreen()
                 }
-            } else {
+            }
+
+            if (deniedPermissions.isNotEmpty()) {
+                // Handle the denied permissions
                 navigateToPermissionDeniedScreen()
             }
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-            requestBluetoothPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+
+        val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.BLUETOOTH_CONNECT
+            )
+        } else {
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION
+            )
+        }
+
+
+        val permissionsNeeded = permissionsToRequest.filter {
+            ContextCompat.checkSelfPermission(
+                this,
+                it
+            ) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (permissionsNeeded.isNotEmpty()) {
+            requestMultiplePermissions.launch(permissionsNeeded.toTypedArray())
+            return
+        }
+
         setContent {
             BluetoothRemoteCarTheme {
                 // A surface container using the 'background' color from the theme
