@@ -239,6 +239,8 @@ fun JoystickScreen(navController: NavController, address:String){
         }
     }
 
+    var lastMessage:String?=null;
+
     Column (
         modifier = Modifier
             .fillMaxSize(),
@@ -252,7 +254,10 @@ fun JoystickScreen(navController: NavController, address:String){
         ) { x: Float, y: Float ->
             // Send data when the joystick position changes
             val message = getMessage(x,y) // encode degree for hardware
-            sendMessage(bluetoothSocket, message) // Change baud rate as needed
+            if(message!=lastMessage) {
+                lastMessage=message
+                sendMessage(bluetoothSocket,message)
+            }
         }
     }
 }
@@ -286,11 +291,14 @@ fun getMessage(x:Float, y:Float):String
     // Calculate the angle in degrees
     val angle = calculateAngle(x, y)
 
-    // Define character categories for each 45-degree increment
-    val categories = arrayOf("g","h","a", "b", "c", "d", "e", "f" ) // Counter-clockwise mapping
+    // Define character categories for each 60-degree increment
+    val categories = arrayOf("f","a", "b", "c", "d","e") // Counter-clockwise mapping
+    // a: 60 to 120
+    // f: 0 to 60
+    // e: -60 to 0
 
-    // Categorize the angle based on 45-degree increments
-    val categoryIndex = ((angle +22.5)% 360 / 45).toInt()
+    // Categorize the angle based on 60-degree increments
+    val categoryIndex = (angle% 360 / 60).toInt()
     return categories[categoryIndex]
 }
 
